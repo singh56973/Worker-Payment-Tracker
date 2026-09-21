@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Worker Payment Tracker - Cloud Edition</title>
+    <link rel="icon" href="data:,">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .auth-section {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            max-width: 400px;
+            margin: 0 auto 30px;
+            text-align: center;
+        }
+
+        .auth-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .auth-section input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 1em;
+        }
+
+        .auth-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .auth-btn:hover {
+            opacity: 0.9;
+        }
+
+        .toggle-auth {
+            color: #667eea;
+            cursor: pointer;
+            text-decoration: underline;
+            margin-top: 10px;
+            font-size: 0.9em;
+        }
+
+        .main-content {
+            display: none;
+        }
+
+        .main-content.active {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content.active {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .card h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .logout-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            float: right;
+            font-size: 0.9em;
+        }
+
+        .logout-btn:hover {
+            background: #c0392b;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .transactions-section {
+            grid-column: 1 / -1;
+        }
+
+        .transaction-item {
+            background: #f8f9fa;
+            padding: 15px;
+            margin-bottom: 12px;
+            border-left: 4px solid #667eea;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .transaction-info {
+            flex: 1;
+        }
+
+        .worker-name {
+            font-weight: 600;
+            color: #333;
+            font-size: 1.05em;
+        }
+
+        .amount {
+            color: #27ae60;
+            font-weight: 700;
+            font-size: 1.1em;
+            margin: 5px 0;
+        }
+
+        .date-time {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .btn-delete {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+
+        .btn-delete:hover {
+            background: #c0392b;
+        }
+
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .summary-table th {
+            background: #667eea;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .summary-table td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+            font-size: 0.95em;
+        }
+
+        .summary-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .summary-table .total-amount {
+            color: #27ae60;
+            font-weight: 700;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #999;
+            padding: 30px;
+            font-size: 1.1em;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .success-message.show {
+            display: block;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .filters {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            border: 2px solid #ddd;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.2s;
+        }
+
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .filter-btn:hover {
+            border-color: #667eea;
+        }
+
+        .export-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+
+        .export-btn:hover {
+            background: #2980b9;
+        }
+
+        .summary-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #ddd;
+        }
+
+        .summary-tab-btn {
+            padding: 10px 15px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-weight: 600;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .summary-tab-btn.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .summary-tab-btn:hover {
+            color: #667eea;
+        }
+
+        .loading {
+            text-align: center;
+            color: #667eea;
+            padding: 20px;
+        }
+
+        .clear-data-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            margin-top: 15px;
+        }
+
+        .clear-data-btn:hover {
+            background: #c0392b;
+        }
+
+        .search-result-item {
+            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+            padding: 15px;
+            margin-bottom: 12px;
+            border-left: 4px solid #27ae60;
+            border-radius: 6px;
+        }
+
+        .search-result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .search-result-header h3 {
+            color: #333;
+            font-size: 1.1em;
+            margin: 0;
+        }
+
+        .total-paid {
+            background: #27ae60;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 5px;
+            font-weight: 700;
+            font-size: 1em;
+        }
+
+        .payment-detail {
+            background: white;
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 5px;
+            border-left: 3px solid #667eea;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .payment-detail-info {
+            flex: 1;
+        }
+
+        .payment-detail-amount {
+            color: #27ae60;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+
+        .payment-detail-date {
+            color: #666;
+            font-size: 0.85em;
+            margin-top: 3px;
+        }
+
+        .no-results {
+            text-align: center;
+            color: #999;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💰 Worker Payment Tracker - Cloud Edition</h1>
+            <p>Manage and track worker payments with cloud backup</p>
+        </div>
+
+        <!-- Auth Section -->
+        <div class="auth-section" id="authSection">
+            <h2 id="authTitle">Login</h2>
+            <div class="error-message" id="authError"></div>
+            
+            <input type="email" id="email" placeholder="Enter email" required>
+            <input type="password" id="password" placeholder="Enter password" required>
+            <button class="auth-btn" onclick="handleAuth()" id="authBtn">Login</button>
+            
+            <div class="toggle-auth" onclick="toggleAuthMode()">
+                Don't have an account? <span id="toggleText">Sign up</span>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content" id="mainContent">
+            <div style="grid-column: 1 / -1; text-align: right; margin-bottom: -25px;">
+                <button class="logout-btn" onclick="logout()">Logout</button>
+            </div>
+
+            <!-- Payment Entry Form -->
+            <div class="card">
+                <h2>Add Payment</h2>
+                <div class="success-message" id="successMessage">✓ Payment added successfully!</div>
+                <div class="error-message" id="errorMessage"></div>
+                
+                <form id="paymentForm">
+                    <div class="form-group">
+                        <label for="workerName">Worker Name *</label>
+                        <input type="text" id="workerName" placeholder="Enter worker name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="amount">Amount (₹) *</label>
+                        <input type="number" id="amount" placeholder="Enter amount" min="0" step="0.01" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="date">Date *</label>
+                        <input type="date" id="date" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="time">Time *</label>
+                        <input type="time" id="time" required>
+                    </div>
+
+                    <button type="submit" class="btn-submit">Add Payment</button>
+                </form>
+            </div>
+
+            <!-- Summary Card -->
+            <div class="card">
+                <h2>Worker Summary</h2>
+                <div class="summary-tabs">
+                    <button class="summary-tab-btn active" onclick="switchSummaryTab('total', this)">Total</button>
+                    <button class="summary-tab-btn" onclick="switchSummaryTab('weekly', this)">Weekly</button>
+                    <button class="summary-tab-btn" onclick="switchSummaryTab('monthly', this)">Monthly</button>
+                </div>
+                <div id="summaryContainer">
+                    <div class="empty-state">No payments recorded yet</div>
+                </div>
+                <div style="margin-top: 15px;">
+                    <button class="export-btn" onclick="exportToCSV()">📥 Export to CSV</button>
+                </div>
+            </div>
+
+            <!-- Transactions List -->
+            <div class="card transactions-section">
+                <h2>Payment History</h2>
+                <div class="filters">
+                    <button class="filter-btn active" onclick="filterTransactions('all', this)">All</button>
+                    <button class="filter-btn" onclick="filterTransactions('today', this)">Today</button>
+                    <button class="filter-btn" onclick="filterTransactions('week', this)">This Week</button>
+                    <button class="filter-btn" onclick="filterTransactions('month', this)">This Month</button>
+                </div>
+                <div id="transactionsContainer">
+                    <div class="empty-state">No payments recorded yet</div>
+                </div>
+            </div>
+
+            <!-- Search Worker Section -->
+            <div class="card transactions-section">
+                <h2>Search Worker</h2>
+                <div class="form-group">
+                    <label for="searchWorker">Worker Name</label>
+                    <input type="text" id="searchWorker" placeholder="Type worker name to search..." 
+                           oninput="searchWorker(this.value)">
+                </div>
+                <div id="searchResults">
+                    <div class="empty-state">Enter a name to search</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Scripts with proper loading -->
+    <script defer src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCq60tiYDePERfAdFJj_oRaGkLpeMF8ZTk",
+            authDomain: "worker-payment-tracker.firebaseapp.com",
+            databaseURL: "https://worker-payment-tracker-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "worker-payment-tracker",
+            storageBucket: "worker-payment-tracker.firebasestorage.app",
+            messagingSenderId: "262864017885",
+            appId: "1:262864017885:web:c1f864ecb3824cdcabe34"
+        };
+
+        let db = null;
+        let auth = null;
+        let currentUser = null;
+        let payments = [];
+        let currentFilter = 'all';
+        let currentSummaryTab = 'total';
+        let isSignUp = false;
+        let firebaseReady = false;
+
+        // Wait for Firebase to load
+        function waitForFirebase() {
+            return new Promise((resolve) => {
+                const checkInterval = setInterval(() => {
+                    if (typeof firebase !== 'undefined' && firebase.app) {
+                        clearInterval(checkInterval);
+                        firebaseReady = true;
+                        resolve();
+                    }
+                }, 100);
+                // Timeout after 10 seconds
+                setTimeout(() => {
+                    clearInterval(checkInterval);
+                    resolve();
+                }, 10000);
+            });
+        }
+
+        // Initialize when page loads
+        window.addEventListener('load', async () => {
+            await waitForFirebase();
+
+            if (!firebaseReady) {
+                alert('Firebase SDK failed to load. Please check your internet connection and reload the page.');
+                return;
+            }
+
+            initFirebase();
+        });
+
+        function initFirebase() {
+            try {
+                // Check if app is already initialized
+                if (firebase.apps.length === 0) {
+                    firebase.initializeApp(firebaseConfig);
+                }
+                
+                auth = firebase.auth();
+                db = firebase.database();
+
+                // Listen for auth changes
+                auth.onAuthStateChanged((user) => {
+                    if (user) {
+                        currentUser = user;
+                        document.getElementById('authSection').style.display = 'none';
+                        document.getElementById('mainContent').classList.add('active');
+                        loadPayments();
+                    } else {
+                        currentUser = null;
+                        document.getElementById('authSection').style.display = 'block';
+                        document.getElementById('mainContent').classList.remove('active');
+                    }
+                });
+            } catch (e) {
+                console.error('Firebase init error:', e);
+                alert('Error: ' + e.message + '\n\nPlease reload the page and try again.');
+            }
+        }
+
+        function handleAuth() {
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('authError');
+
+            if (!email || !password) {
+                errorDiv.textContent = 'Please fill in all fields';
+                errorDiv.classList.add('show');
+                return;
+            }
+
+            if (isSignUp) {
+                auth.createUserWithEmailAndPassword(email, password)
+                    .then(() => {
+                        errorDiv.classList.remove('show');
+                        alert('Account created! You can now login.');
+                        toggleAuthMode();
+                    })
+                    .catch(error => {
+                        errorDiv.textContent = error.message;
+                        errorDiv.classList.add('show');
+                    });
+            } else {
+                auth.signInWithEmailAndPassword(email, password)
+                    .catch(error => {
+                        errorDiv.textContent = error.message;
+                        errorDiv.classList.add('show');
+                    });
+            }
+        }
+
+        function toggleAuthMode() {
+            isSignUp = !isSignUp;
+            document.getElementById('authTitle').textContent = isSignUp ? 'Sign Up' : 'Login';
+            document.getElementById('authBtn').textContent = isSignUp ? 'Create Account' : 'Login';
+            document.getElementById('toggleText').textContent = isSignUp ? 'Already have account? Login' : 'Sign up';
+            document.getElementById('authError').classList.remove('show');
+        }
+
+        function logout() {
+            auth.signOut();
+            document.getElementById('email').value = '';
+            document.getElementById('password').value = '';
+        }
+
+        document.getElementById('paymentForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            if (!currentUser) {
+                alert('You must be logged in');
+                return;
+            }
+
+            const payment = {
+                name: document.getElementById('workerName').value.trim(),
+                amount: parseFloat(document.getElementById('amount').value),
+                date: document.getElementById('date').value,
+                time: document.getElementById('time').value,
+                timestamp: new Date().toISOString()
+            };
+
+            // Save to Firebase
+            const newRef = db.ref('users/' + currentUser.uid + '/payments').push();
+            newRef.set(payment)
+                .then(() => {
+                    this.reset();
+                    document.getElementById('date').valueAsDate = new Date();
+                    document.getElementById('time').value = new Date().toTimeString().slice(0, 5);
+
+                    const successMsg = document.getElementById('successMessage');
+                    successMsg.classList.add('show');
+                    setTimeout(() => successMsg.classList.remove('show'), 3000);
+
+                    loadPayments();
+                })
+                .catch(error => {
+                    document.getElementById('errorMessage').textContent = 'Error: ' + error.message;
+                    document.getElementById('errorMessage').classList.add('show');
+                });
+        });
+
+        function loadPayments() {
+            if (!currentUser) return;
+
+            db.ref('users/' + currentUser.uid + '/payments').on('value', (snapshot) => {
+                payments = [];
+                snapshot.forEach(childSnapshot => {
+                    payments.push({
+                        id: childSnapshot.key,
+                        ...childSnapshot.val()
+                    });
+                });
+
+                updateSummary();
+                updateTransactions();
+            });
+        }
+
+        function getSummaryByType(type) {
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const summary = {};
+
+            payments.forEach(payment => {
+                const paymentDate = new Date(payment.date);
+                const paymentDay = new Date(paymentDate.getFullYear(), paymentDate.getMonth(), paymentDate.getDate());
+                
+                let include = false;
+
+                if (type === 'total') {
+                    include = true;
+                } else if (type === 'weekly') {
+                    const weekAgo = new Date(today);
+                    weekAgo.setDate(weekAgo.getDate() - 7);
+                    include = paymentDay >= weekAgo;
+                } else if (type === 'monthly') {
+                    include = paymentDate.getMonth() === now.getMonth() && 
+                             paymentDate.getFullYear() === now.getFullYear();
+                }
+
+                if (include) {
+                    if (!summary[payment.name]) {
+                        summary[payment.name] = 0;
+                    }
+                    summary[payment.name] += payment.amount;
+                }
+            });
+
+            return summary;
+        }
+
+        function updateSummary() {
+            const summary = getSummaryByType(currentSummaryTab);
+            const container = document.getElementById('summaryContainer');
+            
+            if (Object.keys(summary).length === 0) {
+                container.innerHTML = '<div class="empty-state">No payments recorded yet</div>';
+                return;
+            }
+
+            let title = currentSummaryTab === 'total' ? 'Total Amount' : 
+                       currentSummaryTab === 'weekly' ? 'This Week' : 'This Month';
+
+            let html = `<table class="summary-table"><thead><tr><th>Worker Name</th><th>${title}</th></tr></thead><tbody>`;
+            
+            Object.entries(summary)
+                .sort((a, b) => b[1] - a[1])
+                .forEach(([name, total]) => {
+                    html += `<tr><td>${name}</td><td class="total-amount">₹${total.toFixed(2)}</td></tr>`;
+                });
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        function switchSummaryTab(tab, button) {
+            currentSummaryTab = tab;
+            
+            document.querySelectorAll('.summary-tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            button.classList.add('active');
+
+            updateSummary();
+        }
+
+        function updateTransactions() {
+            let filtered = filterPayments(payments, currentFilter);
+            const container = document.getElementById('transactionsContainer');
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="empty-state">No payments found</div>';
+                return;
+            }
+
+            let html = '';
+            filtered
+                .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+                .forEach(payment => {
+                    const dateObj = new Date(payment.date);
+                    const formattedDate = dateObj.toLocaleDateString('en-IN', { 
+                        day: '2-digit', 
+                        month: 'short', 
+                        year: 'numeric' 
+                    });
+                    
+                    html += `
+                        <div class="transaction-item">
+                            <div class="transaction-info">
+                                <div class="worker-name">${payment.name}</div>
+                                <div class="amount">₹${payment.amount.toFixed(2)}</div>
+                                <div class="date-time">${formattedDate} at ${payment.time}</div>
+                            </div>
+                            <button class="btn-delete" onclick="deletePayment('${payment.id}')">Delete</button>
+                        </div>
+                    `;
+                });
+
+            container.innerHTML = html;
+        }
+
+        function deletePayment(id) {
+            if (confirm('Are you sure you want to delete this payment?')) {
+                if (!currentUser) return;
+                
+                db.ref('users/' + currentUser.uid + '/payments/' + id).remove()
+                    .catch(error => {
+                        alert('Error deleting payment: ' + error.message);
+                    });
+            }
+        }
+
+        function filterPayments(data, filter) {
+            if (filter === 'all') return data;
+
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+            return data.filter(payment => {
+                const paymentDate = new Date(payment.date);
+                const paymentDay = new Date(paymentDate.getFullYear(), paymentDate.getMonth(), paymentDate.getDate());
+
+                switch(filter) {
+                    case 'today':
+                        return paymentDay.getTime() === today.getTime();
+                    case 'week':
+                        const weekAgo = new Date(today);
+                        weekAgo.setDate(weekAgo.getDate() - 7);
+                        return paymentDay >= weekAgo;
+                    case 'month':
+                        return paymentDate.getMonth() === now.getMonth() && 
+                               paymentDate.getFullYear() === now.getFullYear();
+                    default:
+                        return true;
+                }
+            });
+        }
+
+        function filterTransactions(filter, button) {
+            currentFilter = filter;
+            
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            button.classList.add('active');
+
+            updateTransactions();
+        }
+
+        function exportToCSV() {
+            if (payments.length === 0) {
+                alert('No data to export');
+                return;
+            }
+
+            let csv = 'Worker Name,Amount,Date,Time\n';
+            payments.forEach(payment => {
+                csv += `"${payment.name}",${payment.amount},"${payment.date}","${payment.time}"\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `worker_payments_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        function searchWorker(searchTerm) {
+            const container = document.getElementById('searchResults');
+            const term = searchTerm.trim().toLowerCase();
+
+            if (!term) {
+                container.innerHTML = '<div class="empty-state">Enter a name to search</div>';
+                return;
+            }
+
+            // Filter payments for the searched worker
+            const workerPayments = payments.filter(payment => 
+                payment.name.toLowerCase().includes(term)
+            );
+
+            if (workerPayments.length === 0) {
+                container.innerHTML = '<div class="no-results">❌ No worker found with that name</div>';
+                return;
+            }
+
+            // Group by worker name
+            const workerGroups = {};
+            workerPayments.forEach(payment => {
+                if (!workerGroups[payment.name]) {
+                    workerGroups[payment.name] = [];
+                }
+                workerGroups[payment.name].push(payment);
+            });
+
+            let html = '';
+
+            Object.entries(workerGroups).forEach(([workerName, workerPaymentsList]) => {
+                const totalAmount = workerPaymentsList.reduce((sum, p) => sum + p.amount, 0);
+                const sortedPayments = workerPaymentsList.sort((a, b) => 
+                    new Date(b.timestamp) - new Date(a.timestamp)
+                );
+
+                html += `
+                    <div class="search-result-item">
+                        <div class="search-result-header">
+                            <h3>👤 ${workerName}</h3>
+                            <div class="total-paid">Total: ₹${totalAmount.toFixed(2)}</div>
+                        </div>
+                        <div style="margin-top: 12px;">
+                `;
+
+                sortedPayments.forEach(payment => {
+                    const dateObj = new Date(payment.date);
+                    const formattedDate = dateObj.toLocaleDateString('en-IN', { 
+                        day: '2-digit', 
+                        month: 'short', 
+                        year: 'numeric' 
+                    });
+
+                    html += `
+                        <div class="payment-detail">
+                            <div class="payment-detail-info">
+                                <div class="payment-detail-amount">₹${payment.amount.toFixed(2)}</div>
+                                <div class="payment-detail-date">${formattedDate} at ${payment.time}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += `
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
